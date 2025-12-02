@@ -185,7 +185,6 @@ def scrape_and_filter_jobs():
     return final_df
 
 def main():
-def main():
     """Main entry point when running the scraper directly."""
     final_df = scrape_and_filter_jobs()
     

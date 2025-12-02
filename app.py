@@ -1,0 +1,157 @@
+from flask import Flask, render_template, jsonify
+import pandas as pd
+import sqlite3
+import os
+from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import pytz
+
+# Import the scraper function
+from job_scraper import scrape_and_filter_jobs
+
+app = Flask(__name__)
+
+# Database file
+DB_FILE = 'jobs.db'
+
+def init_db():
+    """Initialize SQLite database."""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            company TEXT,
+            job_url TEXT UNIQUE,
+            date_posted TEXT,
+            location TEXT,
+            source TEXT,
+            scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def save_jobs_to_db(df):
+    """Save jobs DataFrame to SQLite database."""
+    if df.empty:
+        return
+    
+    conn = sqlite3.connect(DB_FILE)
+    
+    # Use replace to update existing jobs or insert new ones
+    for _, row in df.iterrows():
+        conn.execute('''
+            INSERT OR REPLACE INTO jobs (title, company, job_url, date_posted, location, source)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            row.get('Job Title', ''),
+            row.get('Company', ''),
+            row.get('Job URL', ''),
+            row.get('Date Posted', ''),
+            row.get('Location', ''),
+            row.get('Source', '')
+        ))
+    
+    conn.commit()
+    conn.close()
+    print(f"Saved {len(df)} jobs to database")
+
+def get_jobs_from_db():
+    """Retrieve all jobs from SQLite database."""
+    conn = sqlite3.connect(DB_FILE)
+    df = pd.read_sql_query("SELECT title, company, job_url, date_posted, location, source FROM jobs ORDER BY scraped_at DESC", conn)
+    conn.close()
+    
+    # Rename columns to match expected format
+    df.rename(columns={
+        'title': 'Job Title',
+        'company': 'Company',
+        'job_url': 'Job URL',
+        'date_posted': 'Date Posted',
+        'location': 'Location',
+        'source': 'Source'
+    }, inplace=True)
+    
+    return df
+
+def run_scraper():
+    """Run the job scraper and save results to database."""
+    print(f"Running scheduled scrape at {datetime.now()}")
+    try:
+        df = scrape_and_filter_jobs()
+        save_jobs_to_db(df)
+        print(f"Scrape completed. Found {len(df)} jobs.")
+    except Exception as e:
+        print(f"Error during scheduled scrape: {e}")
+
+# Initialize database
+init_db()
+
+# Run scraper on startup to ensure we have fresh data
+print("Running initial scrape on startup...")
+try:
+    df = scrape_and_filter_jobs()
+    save_jobs_to_db(df)
+    print(f"Initial scrape complete. Found {len(df)} jobs.")
+except Exception as e:
+    print(f"Error during initial scrape: {e}")
+
+# Setup scheduler for daily scraping at 08:00 Swedish time
+scheduler = BackgroundScheduler()
+stockholm_tz = pytz.timezone('Europe/Stockholm')
+scheduler.add_job(
+    run_scraper,
+    trigger=CronTrigger(hour=8, minute=0, timezone=stockholm_tz),
+    id='daily_scrape',
+    name='Daily job scrape at 08:00 Stockholm time',
+    replace_existing=True
+)
+scheduler.start()
+
+@app.route('/')
+def index():
+    """Render the main dashboard page."""
+    return render_template('index.html')
+
+@app.route('/api/jobs')
+def get_jobs():
+    """API endpoint to get job data as JSON."""
+    df = get_jobs_from_db()
+    
+    if df.empty:
+        return jsonify([])
+    
+    # Replace NaN values with empty strings
+    df = df.fillna('')
+    
+    # Convert DataFrame to list of dictionaries
+    jobs = df.to_dict('records')
+    
+    return jsonify(jobs)
+
+@app.route('/api/scrape', methods=['POST'])
+def trigger_scrape():
+    """Manually trigger a job scrape."""
+    try:
+        df = scrape_and_filter_jobs()
+        save_jobs_to_db(df)
+        return jsonify({
+            'success': True,
+            'message': f'Scrape completed. Found {len(df)} jobs.',
+            'count': len(df)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+if __name__ == '__main__':
+    print("🚀 Starting Job Dashboard...")
+    print("📊 Open your browser and go to: http://localhost:5000")
+    print("⏰ Automatic scraping scheduled for 08:00 daily")
+    print("Press CTRL+C to stop the server")
+    app.run(debug=True, host='0.0.0.0', port=5000)

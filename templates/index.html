@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="sv">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote EU Jobs Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 Remote Entry-Level Jobs</h1>
+            <p class="subtitle">Handpicked remote opportunities for European citizens</p>
+        </header>
+
+        <div class="controls">
+            <div class="search-bar">
+                <input type="text" id="search" placeholder="🔍 Search by title, company, or location..." />
+            </div>
+            <div class="filter-controls">
+                <select id="sort">
+                    <option value="date-desc">Newest First</option>
+                    <option value="date-asc">Oldest First</option>
+                    <option value="company">By Company</option>
+                    <option value="title">By Title</option>
+                </select>
+                <button id="dark-mode-toggle">🌙 Dark Mode</button>
+            </div>
+        </div>
+
+        <div id="stats" class="stats"></div>
+
+        <div id="jobs-container" class="jobs-grid">
+            <div class="loading">Loading jobs...</div>
+        </div>
+    </div>
+
+    <script>
+        let allJobs = [];
+        let filteredJobs = [];
+
+        // Fetch jobs from API
+        async function fetchJobs() {
+            console.log('Fetching jobs...');
+            try {
+                const response = await fetch('/api/jobs');
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                allJobs = await response.json();
+                console.log('Jobs loaded:', allJobs.length);
+                console.log('First job:', allJobs[0]);
+
+                filteredJobs = allJobs;
+                updateStats();
+                renderJobs();
+            } catch (error) {
+                console.error('Error loading jobs:', error);
+                document.getElementById('jobs-container').innerHTML =
+                    `<div class="error">Error loading jobs: ${error.message}<br>Check console for details.</div>`;
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            const stats = document.getElementById('stats');
+            const companies = new Set(filteredJobs.map(j => j.Company)).size;
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${filteredJobs.length}</div>
+                    <div class="stat-label">Jobs Found</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${companies}</div>
+                    <div class="stat-label">Companies</div>
+                </div>
+            `;
+        }
+
+        // Render jobs
+        function renderJobs() {
+            const container = document.getElementById('jobs-container');
+
+            if (filteredJobs.length === 0) {
+                container.innerHTML = '<div class="no-results">No jobs found matching your criteria.</div>';
+                return;
+            }
+
+            container.innerHTML = filteredJobs.map(job => `
+                <div class="job-card">
+                    <div class="job-header">
+                        <h3 class="job-title">${job['Job Title'] || 'N/A'}</h3>
+                        <span class="job-badge">Entry Level</span>
+                    </div>
+                    <div class="job-company">🏢 ${job.Company || 'Unknown'}</div>
+                    <div class="job-meta">
+                        <span class="job-location">📍 ${job.Location || 'Remote'}</span>
+                        <span class="job-date">📅 ${job['Date Posted'] || 'N/A'}</span>
+                    </div>
+                    <div class="job-source">
+                        <span class="source-badge">${job.Source || 'Unknown'}</span>
+                    </div>
+                    <a href="${job['Job URL']}" target="_blank" class="job-link">
+                        View Job →
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        // Search functionality
+        document.getElementById('search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            filteredJobs = allJobs.filter(job =>
+                (job['Job Title'] || '').toLowerCase().includes(query) ||
+                (job.Company || '').toLowerCase().includes(query) ||
+                (job.Location || '').toLowerCase().includes(query)
+            );
+            updateStats();
+            renderJobs();
+        });
+
+        // Sort functionality
+        document.getElementById('sort').addEventListener('change', (e) => {
+            const sortBy = e.target.value;
+
+            filteredJobs.sort((a, b) => {
+                switch (sortBy) {
+                    case 'date-desc':
+                        return new Date(b['Date Posted'] || 0) - new Date(a['Date Posted'] || 0);
+                    case 'date-asc':
+                        return new Date(a['Date Posted'] || 0) - new Date(b['Date Posted'] || 0);
+                    case 'company':
+                        return (a.Company || '').localeCompare(b.Company || '');
+                    case 'title':
+                        return (a['Job Title'] || '').localeCompare(b['Job Title'] || '');
+                    default:
+                        return 0;
+                }
+            });
+
+            renderJobs();
+        });
+
+        // Dark mode toggle
+        document.getElementById('dark-mode-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            document.getElementById('dark-mode-toggle').textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+            localStorage.setItem('darkMode', isDark);
+        });
+
+        // Load dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('dark-mode-toggle').textContent = '☀️ Light Mode';
+        }
+
+        // Initialize
+        fetchJobs();
+    </script>
+</body>
+
+</html>

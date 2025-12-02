@@ -1,0 +1,6 @@
+python-jobspy
+pandas
+python-dotenv
+Flask
+APScheduler
+gunicorn

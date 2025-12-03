@@ -107,6 +107,26 @@ git push
 
 Render will automatically redeploy!
 
+## Pro Tip: Keep Your App Awake 24/7 (Free)
+
+Render's free tier sleeps after 15 minutes of inactivity. This means your scheduled scraper (08:00/20:00) might **NOT** run if the app is sleeping.
+
+**Solution:** Use a free uptime monitor to "ping" your site every 10 minutes.
+
+1. Go to [UptimeRobot.com](https://uptimerobot.com/) (Free)
+2. Create an account
+3. Click **"Add New Monitor"**
+   - **Monitor Type**: HTTP(s)
+   - **Friendly Name**: Job Scraper
+   - **URL**: `https://your-app-name.onrender.com`
+   - **Monitoring Interval**: 10 minutes (important!)
+4. Click **"Create Monitor"**
+
+**Why this works:**
+- By pinging every 10 minutes, the app never goes to sleep.
+- Render allows 750 free hours/month, which covers one app running 24/7 (31 days × 24 hours = 744 hours).
+- This ensures your 08:00 and 20:00 schedules always fire on time!
+
 ## Cost
 
 **100% FREE** on Render's free tier:

@@ -186,24 +186,30 @@
             const btn = document.getElementById('refresh-btn');
             const originalText = btn.textContent;
 
-            if (confirm('Start a new job scrape? This will take a few minutes.')) {
+            if (confirm('Start a new job scrape? This runs in the background and takes 2-3 minutes.')) {
                 try {
                     btn.disabled = true;
-                    btn.textContent = '⏳ Scraping...';
+                    btn.textContent = '🚀 Starting...';
 
                     const response = await fetch('/api/scrape', { method: 'POST' });
                     const data = await response.json();
 
                     if (data.success) {
                         alert(`Success! ${data.message}`);
-                        fetchJobs(); // Reload jobs
+                        btn.textContent = '⏳ Scraping in background...';
+                        // Optional: Re-enable after a few seconds or keep disabled to prevent spam
+                        setTimeout(() => {
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                        }, 5000);
                     } else {
                         alert('Error: ' + data.message);
+                        btn.disabled = false;
+                        btn.textContent = originalText;
                     }
                 } catch (error) {
                     console.error('Scrape error:', error);
                     alert('Failed to start scrape.');
-                } finally {
                     btn.disabled = false;
                     btn.textContent = originalText;
                 }

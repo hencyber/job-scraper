@@ -117,7 +117,7 @@ def initial_scrape():
         logger.error(f"❌ Error during initial scrape: {e}")
 
 import threading
-threading.Thread(target=initial_scrape, daemon=True).start()
+# threading.Thread(target=initial_scrape, daemon=True).start()
 
 # Setup scheduler for daily scraping at 08:00 and 20:00 Stockholm time
 logger.info("📅 Initializing APScheduler...")
@@ -156,14 +156,30 @@ def get_jobs():
 
 @app.route('/api/scrape', methods=['POST'])
 def trigger_scrape():
-    """Manually trigger a job scrape."""
+    """Manually trigger a job scrape in the background."""
+    def run_background_scrape():
+        try:
+            logger.info("🚀 Manual scrape started in background...")
+            df = scrape_and_filter_jobs()
+            save_jobs_to_db(df)
+            
+            # Send email notification
+            from job_scraper import send_email
+            if not df.empty:
+                send_email(df)
+                
+            logger.info(f"✅ Manual scrape completed. Found {len(df)} jobs.")
+        except Exception as e:
+            logger.error(f"❌ Error during manual scrape: {e}")
+
     try:
-        df = scrape_and_filter_jobs()
-        save_jobs_to_db(df)
+        # Start scrape in a separate thread
+        thread = threading.Thread(target=run_background_scrape)
+        thread.start()
+        
         return jsonify({
             'success': True,
-            'message': f'Scrape completed. Found {len(df)} jobs.',
-            'count': len(df)
+            'message': 'Scrape started in background! Check back in 2-3 minutes.'
         })
     except Exception as e:
         return jsonify({

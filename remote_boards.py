@@ -389,9 +389,63 @@ def fetch_all_remote_boards():
     all_jobs.append(fetch_justremote_jobs())
     all_jobs.append(fetch_wellfound_jobs())
     
+    # Tier 3: Niche RSS feeds (crypto/web3/tech)
+    all_jobs.append(fetch_cryptojobslist_jobs())
+    all_jobs.append(fetch_pythonorg_jobs())
+    
     # Combine all
     if all_jobs:
         combined = pd.concat([df for df in all_jobs if not df.empty], ignore_index=True)
         return combined
     
     return pd.DataFrame()
+
+@safe_scrape
+@rate_limit(5)
+def fetch_cryptojobslist_jobs():
+    """
+    Fetch from CryptoJobsList via RSS
+    """
+    print("Fetching from CryptoJobsList...")
+    jobs = []
+    
+    try:
+        feed = feedparser.parse('https://cryptojobslist.com/jobs.rss')
+        for entry in feed.entries[:20]:
+            jobs.append({
+                'Job Title': entry.get('title', ''),
+                'Company': 'Crypto/Web3',
+                'Job URL': entry.get('link', ''),
+                'Date Posted': entry.get('published', ''),
+                'Location': 'Remote/Global',
+                'Source': 'CryptoJobsList'
+            })
+    except Exception as e:
+        print(f"CryptoJobsList failed: {e}")
+    
+    return pd.DataFrame(jobs)
+
+@safe_scrape
+@rate_limit(5)
+def fetch_pythonorg_jobs():
+    """
+    Fetch from Python.org Jobs via RSS
+    """
+    print("Fetching from Python.org Jobs...")
+    jobs = []
+    
+    try:
+        feed = feedparser.parse('https://python.org/jobs/feed/rss/')
+        for entry in feed.entries[:20]:
+            jobs.append({
+                'Job Title': entry.get('title', ''),
+                'Company': 'Python.org',
+                'Job URL': entry.get('link', ''),
+                'Date Posted': entry.get('published', ''),
+                'Location': 'Remote/Global',
+                'Source': 'Python.org'
+            })
+    except Exception as e:
+        print(f"Python.org Jobs failed: {e}")
+    
+    return pd.DataFrame(jobs)

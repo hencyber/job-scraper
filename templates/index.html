@@ -9,31 +9,36 @@
 </head>
 
 <body>
-    <div class="container">
-        <header>
-            <h1>🌍 Remote Entry-Level Jobs</h1>
-            <p class="subtitle">Handpicked remote opportunities for European citizens</p>
-        </header>
-
-        <div class="controls">
-            <div class="search-bar">
-                <input type="text" id="search" placeholder="🔍 Search by title, company, or location..." />
+    <div class="hero">
+        <div class="container">
+            <h1>Find Your Next Remote Entry-Level Job</h1>
+            <p class="subtitle">Curated opportunities for European citizens. No experience required.</p>
+            
+            <div class="search-container">
+                <input type="text" id="search" placeholder="Job title, keywords, or company..." />
+                <button class="search-btn">Search</button>
             </div>
-            <div class="filter-controls">
+        </div>
+    </div>
+
+    <div class="main-content container">
+        <div class="controls-bar">
+            <div class="stats-summary" id="stats-summary">
+                Loading jobs...
+            </div>
+            
+            <div class="filter-actions">
                 <select id="sort">
                     <option value="date-desc">Newest First</option>
                     <option value="date-asc">Oldest First</option>
-                    <option value="company">By Company</option>
-                    <option value="title">By Title</option>
+                    <option value="company">Company (A-Z)</option>
                 </select>
-                <button id="dark-mode-toggle">🌙 Dark Mode</button>
+                <button id="dark-mode-toggle" class="icon-btn" title="Toggle Dark Mode">🌙</button>
             </div>
         </div>
 
-        <div id="stats" class="stats"></div>
-
-        <div id="jobs-container" class="jobs-grid">
-            <div class="loading">Loading jobs...</div>
+        <div id="jobs-container" class="jobs-list">
+            <div class="loading-spinner"></div>
         </div>
     </div>
 
@@ -41,45 +46,48 @@
         let allJobs = [];
         let filteredJobs = [];
 
+        // Helper to get initials for logo
+        function getInitials(name) {
+            return (name || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+        }
+
+        // Helper to get random color for logo background
+        function getLogoColor(name) {
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+            let hash = 0;
+            for (let i = 0; i < (name || '').length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
         // Fetch jobs from API
         async function fetchJobs() {
+            // ... (keep existing fetch logic, just update UI calls)
             console.log('Fetching jobs...');
             try {
                 const response = await fetch('/api/jobs');
-                console.log('Response status:', response.status);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 allJobs = await response.json();
-                console.log('Jobs loaded:', allJobs.length);
-                console.log('First job:', allJobs[0]);
-
                 filteredJobs = allJobs;
                 updateStats();
                 renderJobs();
             } catch (error) {
                 console.error('Error loading jobs:', error);
                 document.getElementById('jobs-container').innerHTML =
-                    `<div class="error">Error loading jobs: ${error.message}<br>Check console for details.</div>`;
+                    `<div class="error-state">
+                        <h3>Unable to load jobs</h3>
+                        <p>${error.message}</p>
+                    </div>`;
+                document.getElementById('stats-summary').textContent = '0 jobs found';
             }
         }
 
         // Update statistics
         function updateStats() {
-            const stats = document.getElementById('stats');
-            const companies = new Set(filteredJobs.map(j => j.Company)).size;
-            stats.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-number">${filteredJobs.length}</div>
-                    <div class="stat-label">Jobs Found</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${companies}</div>
-                    <div class="stat-label">Companies</div>
-                </div>
-            `;
+            const count = filteredJobs.length;
+            const summary = document.getElementById('stats-summary');
+            summary.innerHTML = `<strong>${count}</strong> jobs found`;
         }
 
         // Render jobs
@@ -87,29 +95,46 @@
             const container = document.getElementById('jobs-container');
 
             if (filteredJobs.length === 0) {
-                container.innerHTML = '<div class="no-results">No jobs found matching your criteria.</div>';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <h3>No jobs found</h3>
+                        <p>Try adjusting your search terms</p>
+                    </div>`;
                 return;
             }
 
-            container.innerHTML = filteredJobs.map(job => `
+            container.innerHTML = filteredJobs.map(job => {
+                const companyName = job.Company || 'Unknown Company';
+                const initials = getInitials(companyName);
+                const logoColor = getLogoColor(companyName);
+                
+                return `
                 <div class="job-card">
-                    <div class="job-header">
-                        <h3 class="job-title">${job['Job Title'] || 'N/A'}</h3>
-                        <span class="job-badge">Entry Level</span>
+                    <div class="job-logo" style="background-color: ${logoColor}">
+                        ${initials}
                     </div>
-                    <div class="job-company">🏢 ${job.Company || 'Unknown'}</div>
-                    <div class="job-meta">
-                        <span class="job-location">📍 ${job.Location || 'Remote'}</span>
-                        <span class="job-date">📅 ${job['Date Posted'] || 'N/A'}</span>
+                    <div class="job-content">
+                        <div class="job-main-info">
+                            <h2 class="job-title">
+                                <a href="${job['Job URL']}" target="_blank">${job['Job Title'] || 'Untitled Role'}</a>
+                            </h2>
+                            <div class="job-company-row">
+                                <span class="company-name">${companyName}</span>
+                                <span class="separator">•</span>
+                                <span class="job-location">${job.Location || 'Remote'}</span>
+                            </div>
+                        </div>
+                        <div class="job-meta-info">
+                            <span class="badge entry-level">Entry Level</span>
+                            <span class="post-date">${job['Date Posted'] || 'Recently'}</span>
+                        </div>
                     </div>
-                    <div class="job-source">
-                        <span class="source-badge">${job.Source || 'Unknown'}</span>
+                    <div class="job-actions">
+                        <a href="${job['Job URL']}" target="_blank" class="apply-btn">Apply Now</a>
                     </div>
-                    <a href="${job['Job URL']}" target="_blank" class="job-link">
-                        View Job →
-                    </a>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         // Search functionality

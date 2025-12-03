@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify
 import pandas as pd
 import sqlite3
 import os
+import logging
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -9,6 +10,10 @@ import pytz
 
 # Import the scraper function
 from job_scraper import scrape_and_filter_jobs
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -79,13 +84,13 @@ def get_jobs_from_db():
 
 def run_scraper():
     """Run the job scraper and save results to database."""
-    print(f"Running scheduled scrape at {datetime.now()}")
+    logger.info(f"⏰ SCHEDULED SCRAPE STARTED at {datetime.now()}")
     try:
         df = scrape_and_filter_jobs()
         save_jobs_to_db(df)
-        print(f"Scrape completed. Found {len(df)} jobs.")
+        logger.info(f"✅ Scrape completed. Found {len(df)} jobs.")
     except Exception as e:
-        print(f"Error during scheduled scrape: {e}")
+        logger.error(f"❌ Error during scheduled scrape: {e}")
 
 # Initialize database
 init_db()
@@ -93,18 +98,19 @@ init_db()
 # Run scraper on startup to ensure we have fresh data
 # Run scraper on startup in background thread to avoid blocking server
 def initial_scrape():
-    print("Running initial scrape on startup...")
+    logger.info("🚀 Running initial scrape on startup...")
     try:
         df = scrape_and_filter_jobs()
         save_jobs_to_db(df)
-        print(f"Initial scrape complete. Found {len(df)} jobs.")
+        logger.info(f"✅ Initial scrape complete. Found {len(df)} jobs.")
     except Exception as e:
-        print(f"Error during initial scrape: {e}")
+        logger.error(f"❌ Error during initial scrape: {e}")
 
 import threading
 threading.Thread(target=initial_scrape, daemon=True).start()
 
 # Setup scheduler for daily scraping at 08:00 and 20:00 Stockholm time
+logger.info("📅 Initializing APScheduler...")
 scheduler = BackgroundScheduler()
 stockholm_tz = pytz.timezone('Europe/Stockholm')
 scheduler.add_job(
@@ -115,6 +121,7 @@ scheduler.add_job(
     replace_existing=True
 )
 scheduler.start()
+logger.info("✅ Scheduler started! Jobs scheduled for 08:00 and 20:00 Stockholm time.")
 
 @app.route('/')
 def index():

@@ -9,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 import pandas as pd
 from dotenv import load_dotenv
 from jobspy import scrape_jobs
+from remote_boards import fetch_all_remote_boards
 
 # Load environment variables
 load_dotenv()
@@ -171,6 +172,27 @@ def scrape_and_filter_jobs():
         print("No jobs found.")
         return pd.DataFrame()
 
+    # --- 3. Remote-Only Job Boards ---
+    print("Starting remote-only job boards scraping...")
+    try:
+        remote_jobs = fetch_all_remote_boards()
+        if not remote_jobs.empty:
+            # Rename columns to match our standard format
+            remote_jobs_renamed = remote_jobs.rename(columns={
+                'Job Title': 'title',
+                'Company': 'company',
+                'Job URL': 'job_url',
+                'Date Posted': 'date_posted',
+                'Location': 'location',
+                'Source': 'site'
+            })
+            remote_jobs_renamed['search_term'] = 'Remote Board'
+            remote_jobs_renamed['is_remote_board'] = True
+            all_jobs.append(remote_jobs_renamed)
+            print(f"Found {len(remote_jobs)} jobs from remote-only boards")
+    except Exception as e:
+        print(f"Error fetching remote boards: {e}")
+
     # Combine all dataframes
     full_df = pd.concat(all_jobs, ignore_index=True)
     
@@ -183,8 +205,9 @@ def scrape_and_filter_jobs():
     filtered_jobs = []
     
     for index, row in full_df.iterrows():
-        # Check if it's a Sweden local job
+        # Check flags
         is_sweden = row.get('is_sweden_local', False)
+        is_remote_board = row.get('is_remote_board', False)
         
         # Apply filters
         # 1. Entry Level check (applies to all)
@@ -192,9 +215,10 @@ def scrape_and_filter_jobs():
             continue
             
         # 2. Location check
-        # If it's a Sweden local job, we skip the EU/Remote check
-        # If it's a general search job, we apply is_eu_friendly
-        if not is_sweden and not is_eu_friendly(row):
+        # Skip location checks for:
+        # - Sweden local jobs (already local)
+        # - Remote-only board jobs (already verified remote)
+        if not is_sweden and not is_remote_board and not is_eu_friendly(row):
             continue
             
         filtered_jobs.append(row)

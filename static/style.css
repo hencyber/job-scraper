@@ -2,12 +2,16 @@
 
 :root {
     /* Professional Palette (Indeed/LinkedIn inspired) */
-    --primary: #2563eb;       /* Royal Blue */
+    --primary: #2563eb;
+    /* Royal Blue */
     --primary-hover: #1d4ed8;
-    --bg-body: #f3f4f6;       /* Light Gray Background */
+    --bg-body: #f3f4f6;
+    /* Light Gray Background */
     --bg-card: #ffffff;
-    --text-main: #111827;     /* Almost Black */
-    --text-secondary: #6b7280; /* Gray */
+    --text-main: #111827;
+    /* Almost Black */
+    --text-secondary: #6b7280;
+    /* Gray */
     --border: #e5e7eb;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -70,7 +74,7 @@ body {
     background: white;
     padding: 0.5rem;
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 .search-container input {
@@ -139,18 +143,62 @@ select {
     cursor: pointer;
 }
 
+body.dark-mode select {
+    background-color: #1f2937;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+body.dark-mode select:hover {
+    border-color: #6b7280;
+}
+
 .icon-btn {
     background: none;
-    border: none;
-    font-size: 1.25rem;
+    border: 1px solid transparent;
+    font-size: 1rem;
     cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 50%;
-    transition: background 0.2s;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
 }
 
 .icon-btn:hover {
-    background-color: rgba(0,0,0,0.05);
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
+    border-color: var(--border);
+}
+
+body.dark-mode .icon-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+/* Specific style for the Refresh button to make it pop slightly more */
+#refresh-btn {
+    color: var(--primary);
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+#refresh-btn:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
+body.dark-mode #refresh-btn {
+    color: #60a5fa;
+    /* Lighter blue for dark mode */
+    background-color: rgba(96, 165, 250, 0.1);
+}
+
+body.dark-mode #refresh-btn:hover {
+    background-color: #60a5fa;
+    color: #111827;
 }
 
 /* --- Job List --- */
@@ -277,7 +325,7 @@ body.dark-mode .badge {
 
 /* --- States --- */
 .loading-spinner {
-    border: 3px solid rgba(0,0,0,0.1);
+    border: 3px solid rgba(0, 0, 0, 0.1);
     border-radius: 50%;
     border-top: 3px solid var(--primary);
     width: 40px;
@@ -287,8 +335,13 @@ body.dark-mode .badge {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .empty-state {
@@ -305,15 +358,49 @@ body.dark-mode .badge {
 
 /* --- Mobile Responsive --- */
 @media (max-width: 768px) {
-    .hero h1 { font-size: 1.75rem; }
-    .search-container { flex-direction: column; padding: 1rem; }
-    .search-btn { width: 100%; padding: 0.75rem; }
-    
-    .job-card { flex-direction: column; gap: 1rem; padding: 1rem; }
-    .job-logo { width: 48px; height: 48px; font-size: 1rem; }
-    .job-actions { width: 100%; }
-    .apply-btn { width: 100%; text-align: center; }
-    
-    .controls-bar { flex-direction: column; gap: 1rem; align-items: flex-start; }
-    .filter-actions { width: 100%; justify-content: space-between; }
+    .hero h1 {
+        font-size: 1.75rem;
+    }
+
+    .search-container {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .search-btn {
+        width: 100%;
+        padding: 0.75rem;
+    }
+
+    .job-card {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .job-logo {
+        width: 48px;
+        height: 48px;
+        font-size: 1rem;
+    }
+
+    .job-actions {
+        width: 100%;
+    }
+
+    .apply-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .controls-bar {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .filter-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
 }

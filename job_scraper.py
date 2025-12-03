@@ -140,6 +140,32 @@ def scrape_and_filter_jobs():
         except Exception as e:
             print(f"Error scraping {term}: {e}")
 
+    # --- 2. Sweden On-site/Hybrid Jobs ---
+    print(f"Starting Sweden job scrape...")
+    SWEDEN_TERMS = SEARCH_TERMS + ["Internship", "Trainee", "Summer Job"]
+    
+    for term in SWEDEN_TERMS:
+        print(f"Scraping Sweden for: {term}")
+        try:
+            jobs = scrape_jobs(
+                site_name=["linkedin", "indeed", "glassdoor"],
+                search_term=term,
+                location="Sweden",  # Specific location
+                results_wanted=RESULTS_WANTED,
+                hours_old=HOURS_OLD,
+                country_indeed='Sweden',
+                linkedin_fetch_description=True
+            )
+            
+            print(f"Found {len(jobs)} jobs in Sweden for {term}")
+            jobs['search_term'] = term
+            jobs['is_sweden_local'] = True # Flag to identify these jobs
+            all_jobs.append(jobs)
+            time.sleep(random.uniform(2, 5))
+            
+        except Exception as e:
+            print(f"Error scraping Sweden {term}: {e}")
+
     if not all_jobs:
         print("No jobs found.")
         return pd.DataFrame()
@@ -156,8 +182,21 @@ def scrape_and_filter_jobs():
     filtered_jobs = []
     
     for index, row in full_df.iterrows():
-        if is_eu_friendly(row) and is_entry_level(row):
-            filtered_jobs.append(row)
+        # Check if it's a Sweden local job
+        is_sweden = row.get('is_sweden_local', False)
+        
+        # Apply filters
+        # 1. Entry Level check (applies to all)
+        if not is_entry_level(row):
+            continue
+            
+        # 2. Location check
+        # If it's a Sweden local job, we skip the EU/Remote check
+        # If it's a general search job, we apply is_eu_friendly
+        if not is_sweden and not is_eu_friendly(row):
+            continue
+            
+        filtered_jobs.append(row)
 
     if not filtered_jobs:
         print("No jobs remained after EU and entry-level filtering.")

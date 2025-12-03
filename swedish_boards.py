@@ -88,72 +88,33 @@ def fetch_jobbsafari_jobs():
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        response = requests.get('https://www.jobbsafari.se/jobb/junior', headers=headers, timeout=10)
+        response = requests.get('https://jobbsafari.se/lediga-jobb', headers=headers, timeout=10)
         
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
-            job_cards = soup.find_all('div', class_='job-item')[:15]
+            # Correct selector: a.MuiButtonBase-root.MuiCardActionArea-root
+            job_links = soup.find_all('a', class_='MuiButtonBase-root')[:15]
             
-            for card in job_cards:
+            for link in job_links:
                 try:
-                    title = card.find('h2')
-                    company = card.find('span', class_='company')
-                    link = card.find('a')
+                    title_elem = link.find('h3')
+                    # First p tag is company
+                    paragraphs = link.find_all('p')
+                    company_elem = paragraphs[0] if paragraphs else None
                     
-                    if title and link:
+                    if title_elem and link.get('href'):
                         jobs.append({
-                            'Job Title': title.text.strip(),
-                            'Company': company.text.strip() if company else 'Jobbsafari',
-                            'Job URL': 'https://www.jobbsafari.se' + link['href'] if not link['href'].startswith('http') else link['href'],
+                            'Job Title': title_elem.text.strip(),
+                            'Company': company_elem.text.strip() if company_elem else 'Jobbsafari',
+                            'Job URL': 'https://jobbsafari.se' + link['href'] if link['href'].startswith('/') else link['href'],
                             'Date Posted': datetime.now().strftime('%Y-%m-%d'),
                             'Location': 'Sverige',
                             'Source': 'Jobbsafari'
                         })
-                except Exception:
+                except Exception as e:
                     continue
     except Exception as e:
         print(f"Jobbsafari scraping failed: {e}")
-    
-    return pd.DataFrame(jobs)
-
-@safe_scrape
-@rate_limit(5)
-def fetch_monsterse_jobs():
-    """
-    Fetch jobs from Monster.se via HTML scraping
-    """
-    print("Fetching from Monster.se...")
-    jobs = []
-    
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        response = requests.get('https://www.monster.se/jobb/q-junior', headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            job_listings = soup.find_all('div', class_='job-listing')[:15]
-            
-            for listing in job_listings:
-                try:
-                    title = listing.find('h2')
-                    company = listing.find('div', class_='company')
-                    link = listing.find('a')
-                    
-                    if title and link:
-                        jobs.append({
-                            'Job Title': title.text.strip(),
-                            'Company': company.text.strip() if company else 'Monster.se',
-                            'Job URL': link['href'] if link['href'].startswith('http') else 'https://www.monster.se' + link['href'],
-                            'Date Posted': datetime.now().strftime('%Y-%m-%d'),
-                            'Location': 'Sverige',
-                            'Source': 'Monster.se'
-                        })
-                except Exception:
-                    continue
-    except Exception as e:
-        print(f"Monster.se scraping failed: {e}")
     
     return pd.DataFrame(jobs)
 
@@ -170,22 +131,25 @@ def fetch_ledigajobb_jobs():
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        response = requests.get('https://www.ledigajobb.se/junior', headers=headers, timeout=10)
+        # Search for junior jobs
+        response = requests.get('https://www.ledigajobb.se/sok?s=junior', headers=headers, timeout=10)
         
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
-            job_divs = soup.find_all('div', class_='job')[:15]
+            # Correct selector: a.job-link
+            job_links = soup.find_all('a', class_='job-link')[:15]
             
-            for div in job_divs:
+            for link in job_links:
                 try:
-                    title = div.find('h3')
-                    company = div.find('span', class_='company-name')
-                    link = div.find('a')
+                    title = link.text.strip()
+                    # Company name is often in a sibling text node or adjacent element
+                    # For now, extract from link href or use default
+                    company = 'Ledigajobb.se'  # Placeholder - may need more inspection
                     
-                    if title and link:
+                    if title and link.get('href'):
                         jobs.append({
-                            'Job Title': title.text.strip(),
-                            'Company': company.text.strip() if company else 'Ledigajobb.se',
+                            'Job Title': title,
+                            'Company': company,
                             'Job URL': link['href'] if link['href'].startswith('http') else 'https://www.ledigajobb.se' + link['href'],
                             'Date Posted': datetime.now().strftime('%Y-%m-%d'),
                             'Location': 'Sverige',
@@ -378,21 +342,15 @@ def fetch_all_swedish_boards():
     """
     all_jobs = []
     
-    # API sources (most reliable)
-    all_jobs.append(fetch_arbetsformedlingen_jobs())
-    
-    # HTML scraping sources
+    #  Focus on boards that actually work
     all_jobs.append(fetch_jobbsafari_jobs())
-    all_jobs.append(fetch_monsterse_jobs())
     all_jobs.append(fetch_ledigajobb_jobs())
-    all_jobs.append(fetch_blocket_jobb())
-    all_jobs.append(fetch_karriarguiden_network())
-    all_jobs.append(fetch_careerjet_sweden())
-    all_jobs.append(fetch_akademikernas_jobs())
     
-    # Combine all
-    if all_jobs:
-        combined = pd.concat([df for df in all_jobs if not df.empty], ignore_index=True)
+    # Combine all - handle case where all are empty
+    non_empty_jobs = [df for df in all_jobs if not df.empty]
+    
+    if non_empty_jobs:
+        combined = pd.concat(non_empty_jobs, ignore_index=True)
         return combined
     
     return pd.DataFrame()

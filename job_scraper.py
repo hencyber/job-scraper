@@ -20,13 +20,17 @@ SEARCH_TERMS = [
     "Junior Data Scientist",
     "Entry Level Data Scientist",
     "Junior Software Testing Engineer",
+    "Entry Level Software Testing Engineer",
+    "Junior Test Automation Engineer",
     "Entry Level Test Automation Engineer",
     "Junior Back-End Engineer",
-    "Entry Level DevOps",
+    "Entry Level Back-End Engineer",
+    "Junior Data Software Engineer",
+    "Entry Level Data Software Engineer",
     "Junior DevOps",
-    "Entry Level MLOps",
-    "Graduate Data Scientist",
-    "Graduate Software Engineer"
+    "Entry Level DevOps",
+    "Junior MLOps",
+    "Entry Level MLOps"
 ]
 
 # Note: "Remote" is often handled by the location field in jobspy or specific site parameters.
@@ -67,6 +71,44 @@ EXPERIENCE_KEYWORDS_TO_EXCLUDE = [
     "senior", "lead", "principal", "staff", "architect", "director", "manager",
     "5+ years", "5-7 years", "7+ years", "10+ years", "expert", "experienced"
 ]
+
+# Strict filtering keywords (Must match at least one)
+RELEVANT_KEYWORDS = [
+    # Data Scientist / MLOps
+    "data scientist", "data science", "machine learning", "mlops",
+    # Testing
+    "software testing engineer", "test automation engineer", "qa engineer", "automation engineer", "software test",
+    # Back-End / Data Software Engineer
+    "back-end", "backend", "data software engineer", "data engineer",
+    # DevOps
+    "devops", "sre", "reliability engineer"
+]
+
+# Keywords to explicitly EXCLUDE (even if they match above)
+IRRELEVANT_KEYWORDS = [
+    "frontend", "front-end", "web design", "ui/ux", "full stack", "fullstack",
+    "sales", "marketing", "product manager", "project manager", "customer success", 
+    "support", "hr", "recruiter", "account executive", "business analyst", 
+    "consultant", "senior", "lead", "principal", "manager", "director" # Re-enforcing seniority exclusion here too
+]
+
+def is_relevant_job(job):
+    """
+    Strictly checks if the job title matches the user's specific areas of interest.
+    """
+    title = str(job.get('title', '')).lower()
+    
+    # 1. Check for explicit exclusions first
+    for kw in IRRELEVANT_KEYWORDS:
+        if kw in title:
+            return False
+    
+    # 2. Check if any relevant keyword is in the title
+    for kw in RELEVANT_KEYWORDS:
+        if kw in title:
+            return True
+            
+    return False
 
 def is_eu_friendly(job):
     """
@@ -215,6 +257,10 @@ def scrape_and_filter_jobs():
     except Exception as e:
         print(f"Error fetching Swedish boards: {e}")
 
+    if not all_jobs:
+        print("No jobs found.")
+        return pd.DataFrame()
+
     # Combine all dataframes
     full_df = pd.concat(all_jobs, ignore_index=True)
     
@@ -233,6 +279,11 @@ def scrape_and_filter_jobs():
         is_swedish_board = row.get('is_swedish_board', False)
         
         # Apply filters
+        
+        # 0. Strict Topic/Keyword Check (New)
+        if not is_relevant_job(row):
+            continue
+
         # 1. Entry Level check (applies to all)
         if not is_entry_level(row):
             continue

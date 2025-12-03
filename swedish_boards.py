@@ -280,23 +280,30 @@ def fetch_careerjet_sweden():
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        response = requests.get('https://www.careerjet.se/sokning/jobb?s=junior', headers=headers, timeout=10)
+        response = requests.get('https://www.careerjet.se/jobb?s=junior', headers=headers, timeout=10)
         
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
-            job_items = soup.find_all('article', class_='job')[:15]
+            # Correct selector from browser inspection: article tag
+            job_items = soup.find_all('article')[:15]
             
             for item in job_items:
                 try:
-                    title = item.find('h2')
-                    company = item.find('p', class_='company')
-                    link = item.find('a')
+                    # h2 > a contains title
+                    title_link = item.find('h2')
+                    if title_link:
+                        title_a = title_link.find('a')
+                    else:
+                        continue
                     
-                    if title and link:
+                    # p > a.notclicky contains company
+                    company_link = item.find('a', class_='notclicky')
+                    
+                    if title_a and title_a.get('href'):
                         jobs.append({
-                            'Job Title': title.text.strip(),
-                            'Company': company.text.strip() if company else 'Careerjet',
-                            'Job URL': link['href'] if link['href'].startswith('http') else 'https://www.careerjet.se' + link['href'],
+                            'Job Title': title_a.text.strip(),
+                            'Company': company_link.text.strip() if company_link else 'Careerjet',
+                            'Job URL': title_a['href'] if title_a['href'].startswith('http') else 'https://www.careerjet.se' + title_a['href'],
                             'Date Posted': datetime.now().strftime('%Y-%m-%d'),
                             'Location': 'Sverige',
                             'Source': 'Careerjet.se'
@@ -361,6 +368,7 @@ def fetch_all_swedish_boards():
     # HTML scraping sources  
     all_jobs.append(fetch_jobbsafari_jobs())
     all_jobs.append(fetch_ledigajobb_jobs())
+    all_jobs.append(fetch_careerjet_sweden())
     
     # Combine all - handle case where all are empty
     non_empty_jobs = [df for df in all_jobs if not df.empty]

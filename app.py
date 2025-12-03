@@ -162,11 +162,19 @@ def trigger_scrape():
             logger.info("🚀 Manual scrape started in background...")
             df = scrape_and_filter_jobs()
             save_jobs_to_db(df)
+            logger.info(f"Saved {len(df)} jobs to database")
             
             # Send email notification
-            from job_scraper import send_email
-            if not df.empty:
-                send_email(df)
+            try:
+                from job_scraper import send_email
+                if not df.empty:
+                    logger.info("📧 Attempting to send email notification...")
+                    send_email(df)
+                    logger.info("📧 Email sent successfully!")
+                else:
+                    logger.warning("No jobs found, skipping email")
+            except Exception as email_error:
+                logger.error(f"❌ Failed to send email: {email_error}")
                 
             logger.info(f"✅ Manual scrape completed. Found {len(df)} jobs.")
         except Exception as e:

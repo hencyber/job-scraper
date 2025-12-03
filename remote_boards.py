@@ -184,6 +184,190 @@ def fetch_himalayas_jobs():
     
     return pd.DataFrame(jobs)
 
+@safe_scrape
+@rate_limit(5)
+def fetch_jobicy_jobs():
+    """
+    Fetch jobs from Jobicy via API
+    https://jobicy.com/api
+    """
+    print("Fetching from Jobicy...")
+    jobs = []
+    
+    try:
+        response = requests.get('https://jobicy.com/api/v2/remote-jobs?count=20', timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            for job in data.get('jobs', []):
+                jobs.append({
+                    'Job Title': job.get('jobTitle', ''),
+                    'Company': job.get('companyName', 'Jobicy'),
+                    'Job URL': job.get('url', ''),
+                    'Date Posted': job.get('pubDate', ''),
+                    'Location': 'Remote',
+                    'Source': 'Jobicy'
+                })
+    except Exception as e:
+        print(f"Jobicy API failed: {e}")
+    
+    return pd.DataFrame(jobs)
+
+@safe_scrape
+@rate_limit(5)
+def fetch_euremote_jobs():
+    """
+    Fetch jobs from EU Remote Jobs via RSS
+    """
+    print("Fetching from EU Remote Jobs...")
+    jobs = []
+    
+    try:
+        feed = feedparser.parse('https://euremotejobs.com/jobs.xml')
+        for entry in feed.entries[:20]:
+            jobs.append({
+                'Job Title': entry.get('title', ''),
+                'Company': entry.get('author', 'EU Remote'),
+                'Job URL': entry.get('link', ''),
+                'Date Posted': entry.get('published', ''),
+                'Location': 'Remote (EU)',
+                'Source': 'EU Remote Jobs'
+            })
+    except Exception as e:
+        print(f"EU Remote Jobs RSS failed: {e}")
+    
+    return pd.DataFrame(jobs)
+
+@safe_scrape
+@rate_limit(5)
+def fetch_workingnomads_jobs():
+    """
+    Fetch jobs from Working Nomads via RSS
+    """
+    print("Fetching from Working Nomads...") 
+    jobs = []
+    
+    try:
+        feed = feedparser.parse('https://www.workingnomads.com/jobs/feed')
+        for entry in feed.entries[:15]:
+            jobs.append({
+                'Job Title': entry.get('title', ''),
+                'Company': 'Working Nomads',
+                'Job URL': entry.get('link', ''),
+                'Date Posted': entry.get('published', ''),
+                'Location': 'Remote',
+                'Source': 'Working Nomads'
+            })
+    except Exception as e:
+        print(f"Working Nomads RSS failed: {e}")
+    
+    return pd.DataFrame(jobs)
+
+@safe_scrape
+@rate_limit(5)
+def fetch_remoterocketship_jobs():
+    """
+    Fetch jobs from Remote Rocketship via RSS
+    """
+    print("Fetching from Remote Rocketship...")
+    jobs = []
+    
+    try:
+        feed = feedparser.parse('https://remoterocketship.com/jobs/feed')
+        for entry in feed.entries[:15]:
+            jobs.append({
+                'Job Title': entry.get('title', ''),
+                'Company': entry.get('author', 'Remote Rocketship'),
+                'Job URL': entry.get('link', ''),
+                'Date Posted': entry.get('published', ''),
+                'Location': 'Remote',
+                'Source': 'Remote Rocketship'
+            })
+    except Exception as e:
+        print(f"Remote Rocketship RSS failed: {e}")
+    
+    return pd.DataFrame(jobs)
+
+@safe_scrape
+@rate_limit(5)
+def fetch_justremote_jobs():
+    """
+    Fetch jobs from JustRemote via HTML
+    """
+    print("Fetching from JustRemote...")
+    jobs = []
+    
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get('https://justremote.co/remote-developer-jobs', headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            job_cards = soup.find_all('div', class_='job-listing')[:15]
+            
+            for card in job_cards:
+                try:
+                    title = card.find('h3')
+                    company = card.find('span', class_='company')
+                    link = card.find('a')
+                    
+                    if title and link:
+                        jobs.append({
+                            'Job Title': title.text.strip(),
+                            'Company': company.text.strip() if company else 'JustRemote',
+                            'Job URL': 'https://justremote.co' + link['href'] if not link['href'].startswith('http') else link['href'],
+                            'Date Posted': datetime.now().strftime('%Y-%m-%d'),
+                            'Location': 'Remote',
+                            'Source': 'JustRemote'
+                        })
+                except Exception:
+                    continue
+    except Exception as e:
+        print(f"JustRemote scraping failed: {e}")
+    
+    return pd.DataFrame(jobs)
+
+@safe_scrape
+@rate_limit(5)
+def fetch_wellfound_jobs():
+    """
+    Fetch jobs from Wellfound (AngelList) - simplified scraper
+    """
+    print("Fetching from Wellfound...")
+    jobs = []
+    
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        # Wellfound has complex JS rendering, this might not work perfectly
+        response = requests.get('https://wellfound.com/remote', headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            # Simplified - actual structure needs inspection
+            job_divs = soup.find_all('div', class_='job')[:10]
+            
+            for div in job_divs:
+                try:
+                    title = div.find('h2')
+                    if title:
+                        jobs.append({
+                            'Job Title': title.text.strip(),
+                            'Company': 'Wellfound',
+                            'Job URL': 'https://wellfound.com/remote',
+                            'Date Posted': datetime.now().strftime('%Y-%m-%d'),
+                            'Location': 'Remote',
+                            'Source': 'Wellfound'
+                        })
+                except Exception:
+                    continue
+    except Exception as e:
+        print(f"Wellfound scraping failed: {e}")
+    
+    return pd.DataFrame(jobs)
+
 def fetch_all_remote_boards():
     """
     Fetch jobs from all remote-only job boards
@@ -194,10 +378,16 @@ def fetch_all_remote_boards():
     # Tier 1: RSS/API (most reliable)
     all_jobs.append(fetch_remotive_jobs())
     all_jobs.append(fetch_weworkremotely_jobs())
+    all_jobs.append(fetch_jobicy_jobs())
+    all_jobs.append(fetch_euremote_jobs())
+    all_jobs.append(fetch_workingnomads_jobs())
+    all_jobs.append(fetch_remoterocketship_jobs())
     
     # Tier 2: HTML scraping (less reliable but valuable)
     all_jobs.append(fetch_remoteok_jobs())
     all_jobs.append(fetch_himalayas_jobs())
+    all_jobs.append(fetch_justremote_jobs())
+    all_jobs.append(fetch_wellfound_jobs())
     
     # Combine all
     if all_jobs:
@@ -205,3 +395,4 @@ def fetch_all_remote_boards():
         return combined
     
     return pd.DataFrame()
+

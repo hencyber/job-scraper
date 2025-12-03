@@ -164,7 +164,7 @@ def scrape_and_filter_jobs():
         print(f"Scraping for: {term}")
         try:
             jobs = scrape_jobs(
-                site_name=["linkedin", "indeed", "zip_recruiter", "google"],
+                site_name=["linkedin", "indeed", "google"],
                 search_term=term,
                 location=LOCATION,
                 results_wanted=RESULTS_WANTED,

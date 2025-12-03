@@ -43,35 +43,48 @@ def safe_scrape(func):
 @rate_limit(5)
 def fetch_arbetsformedlingen_jobs():
     """
-    Fetch jobs from Arbetsf\u00f6rmedlingen/Platsbanken via API
-    https://arbetsformedlingen.se/om-oss/oppna-data-och-api
+    Fetch jobs from Arbetsförmedlingen/Platsbanken via JobSearch API
+    https://jobtechdev.se/docs/apis/jobsearch/
     """
     print("Fetching from Arbetsförmedlingen/Platsbanken...")
     jobs = []
     
     try:
-        # Arbetsförmedlingen JobSearch API
-        # This is a simplified version - actual API requires more complex authentication
-        headers = {
-            'User-Agent': 'Mozilla/5.0',
-            'Accept': 'application/json'
-        }
+        # Arbetsförmedlingen JobSearch API - public, no auth required!
+        base_url = 'https://jobsearch.api.jobtechdev.se'
+        endpoint = '/search'
         
-        # Public job search endpoint (simplified)
-        url = 'https://arbetsformedlingen.se/platsannonser/matchning'
         params = {
-            'nyckelord': 'junior OR trainee OR graduate',
-            'antalrader': 20
+            'q': 'junior OR trainee OR graduate OR entry-level',
+            'limit': 20,
+            'offset': 0
         }
         
-        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response = requests.get(base_url + endpoint, params=params, timeout=10)
         
         if response.status_code == 200:
-            # NOTE: Actual API structure may differ - this is a placeholder
-            # Real implementation needs proper API documentation
-            print(f"Arbetsförmedlingen: API response received (status {response.status_code})")
+            data = response.json()
+            hits = data.get('hits', [])
+            
+            for hit in hits:
+                try:
+                    jobs.append({
+                        'Job Title': hit.get('headline', ''),
+                        'Company': hit.get('employer', {}).get('name', 'AF'),
+                        'Job URL': hit.get('webpage_url', ''),
+                        'Date Posted': hit.get('publication_date', ''),
+                        'Location': hit.get('workplace_address', {}).get('municipality', 'Sverige'),
+                        'Source': 'Arbetsförmedlingen'
+                    })
+                except Exception:
+                    continue
+            
+            print(f"Arbetsförmedlingen: Found {len(jobs)} jobs")
+        else:
+            print(f"Arbetsförmedlingen: API returned status {response.status_code}")
+            
     except Exception as e:
-        print(f"Arbetsförmedlingen scraping failed: {e}")
+        print(f"Arbetsförmedlingen API failed: {e}")
     
     return pd.DataFrame(jobs)
 
@@ -342,7 +355,10 @@ def fetch_all_swedish_boards():
     """
     all_jobs = []
     
-    #  Focus on boards that actually work
+    # API sources (most reliable)
+    all_jobs.append(fetch_arbetsformedlingen_jobs())
+    
+    # HTML scraping sources  
     all_jobs.append(fetch_jobbsafari_jobs())
     all_jobs.append(fetch_ledigajobb_jobs())
     

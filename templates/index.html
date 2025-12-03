@@ -11,9 +11,10 @@
 <body>
     <div class="hero">
         <div class="container">
-            <h1>Find Your Next Remote Entry-Level Job</h1>
-            <p class="subtitle">Curated opportunities for European citizens. No experience required.</p>
-            
+            <img src="/static/logo.png" alt="JobScraper Logo" class="site-logo"
+                style="max-width: 150px; margin-bottom: 20px;">
+            <h1>Find Your Next Entry-Level Job</h1>
+
             <div class="search-container">
                 <input type="text" id="search" placeholder="Job title, keywords, or company..." />
                 <button class="search-btn">Search</button>
@@ -26,8 +27,9 @@
             <div class="stats-summary" id="stats-summary">
                 Loading jobs...
             </div>
-            
+
             <div class="filter-actions">
+                <button id="refresh-btn" class="icon-btn" title="Refresh Jobs (Scrape New)">🔄 Refresh</button>
                 <select id="sort">
                     <option value="date-desc">Newest First</option>
                     <option value="date-asc">Oldest First</option>
@@ -108,7 +110,7 @@
                 const companyName = job.Company || 'Unknown Company';
                 const initials = getInitials(companyName);
                 const logoColor = getLogoColor(companyName);
-                
+
                 return `
                 <div class="job-card">
                     <div class="job-logo" style="background-color: ${logoColor}">
@@ -177,6 +179,35 @@
             const isDark = document.body.classList.contains('dark-mode');
             document.getElementById('dark-mode-toggle').textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
             localStorage.setItem('darkMode', isDark);
+        });
+
+        // Manual Refresh / Scrape
+        document.getElementById('refresh-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('refresh-btn');
+            const originalText = btn.textContent;
+
+            if (confirm('Start a new job scrape? This will take a few minutes.')) {
+                try {
+                    btn.disabled = true;
+                    btn.textContent = '⏳ Scraping...';
+
+                    const response = await fetch('/api/scrape', { method: 'POST' });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(`Success! ${data.message}`);
+                        fetchJobs(); // Reload jobs
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Scrape error:', error);
+                    alert('Failed to start scrape.');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            }
         });
 
         // Load dark mode preference

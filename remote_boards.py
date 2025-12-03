@@ -395,4 +395,3 @@ def fetch_all_remote_boards():
         return combined
     
     return pd.DataFrame()
-

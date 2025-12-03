@@ -213,21 +213,19 @@ def send_email(df):
 
     subject = f"New Remote EU Jobs Found - {datetime.datetime.now().strftime('%Y-%m-%d')}"
     
-    # Create HTML body
-    html_table = df.to_html(index=False, render_links=True, escape=False)
-    
-    dashboard_url = os.getenv("DASHBOARD_URL", "https://your-app-name.onrender.com")
+    dashboard_url = os.getenv("DASHBOARD_URL", "https://job-scraper-mg37.onrender.com/")
     
     body = f"""
     <html>
       <body style="font-family: Arial, sans-serif;">
         <div style="background-color: #f3f4f6; padding: 20px; text-align: center;">
             <h2 style="color: #2563eb;">Found {len(df)} new jobs matching your criteria</h2>
-            <p>View these jobs and more on your dashboard:</p>
-            <a href="{dashboard_url}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Open Dashboard</a>
+            <p>The full list of jobs is available on your dashboard.</p>
+            <br>
+            <a href="{dashboard_url}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Go to Dashboard</a>
+            <br><br>
+            <p style="color: #666; font-size: 12px;">{dashboard_url}</p>
         </div>
-        <br>
-        {html_table}
       </body>
     </html>
     """

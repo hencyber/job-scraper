@@ -91,13 +91,18 @@ def run_scraper():
 init_db()
 
 # Run scraper on startup to ensure we have fresh data
-print("Running initial scrape on startup...")
-try:
-    df = scrape_and_filter_jobs()
-    save_jobs_to_db(df)
-    print(f"Initial scrape complete. Found {len(df)} jobs.")
-except Exception as e:
-    print(f"Error during initial scrape: {e}")
+# Run scraper on startup in background thread to avoid blocking server
+def initial_scrape():
+    print("Running initial scrape on startup...")
+    try:
+        df = scrape_and_filter_jobs()
+        save_jobs_to_db(df)
+        print(f"Initial scrape complete. Found {len(df)} jobs.")
+    except Exception as e:
+        print(f"Error during initial scrape: {e}")
+
+import threading
+threading.Thread(target=initial_scrape, daemon=True).start()
 
 # Setup scheduler for daily scraping at 08:00 Swedish time
 scheduler = BackgroundScheduler()

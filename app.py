@@ -84,11 +84,21 @@ def get_jobs_from_db():
 
 def run_scraper():
     """Run the job scraper and save results to database."""
+    from job_scraper import send_email
+    
     logger.info(f"⏰ SCHEDULED SCRAPE STARTED at {datetime.now()}")
     try:
         df = scrape_and_filter_jobs()
         save_jobs_to_db(df)
         logger.info(f"✅ Scrape completed. Found {len(df)} jobs.")
+        
+        # Send email notification
+        if not df.empty:
+            logger.info("📧 Sending email notification...")
+            send_email(df)
+            logger.info("📧 Email sent successfully!")
+        else:
+            logger.info("📭 No jobs to email.")
     except Exception as e:
         logger.error(f"❌ Error during scheduled scrape: {e}")
 

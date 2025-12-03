@@ -104,14 +104,14 @@ def initial_scrape():
 import threading
 threading.Thread(target=initial_scrape, daemon=True).start()
 
-# Setup scheduler for daily scraping at 08:00 Swedish time
+# Setup scheduler for daily scraping at 08:00 and 20:00 Stockholm time
 scheduler = BackgroundScheduler()
 stockholm_tz = pytz.timezone('Europe/Stockholm')
 scheduler.add_job(
     run_scraper,
-    trigger=CronTrigger(hour=8, minute=0, timezone=stockholm_tz),
+    trigger=CronTrigger(hour='8,20', minute=0, timezone=stockholm_tz),
     id='daily_scrape',
-    name='Daily job scrape at 08:00 Stockholm time',
+    name='Daily job scrape at 08:00 and 20:00 Stockholm time',
     replace_existing=True
 )
 scheduler.start()
@@ -157,6 +157,6 @@ def trigger_scrape():
 if __name__ == '__main__':
     print("🚀 Starting Job Dashboard...")
     print("📊 Open your browser and go to: http://localhost:5000")
-    print("⏰ Automatic scraping scheduled for 08:00 daily")
+    print("⏰ Automatic scraping scheduled for 08:00 and 20:00 daily")
     print("Press CTRL+C to stop the server")
     app.run(debug=True, host='0.0.0.0', port=5000)

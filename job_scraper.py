@@ -10,6 +10,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from jobspy import scrape_jobs
 from remote_boards import fetch_all_remote_boards
+from swedish_boards import fetch_all_swedish_boards
 
 # Load environment variables
 load_dotenv()
@@ -193,6 +194,27 @@ def scrape_and_filter_jobs():
     except Exception as e:
         print(f"Error fetching remote boards: {e}")
 
+    # --- 4. Swedish Job Boards ---
+    print("Starting Swedish job boards scraping...")
+    try:
+        swedish_jobs = fetch_all_swedish_boards()
+        if not swedish_jobs.empty:
+            # Rename columns to match our standard format
+            swedish_jobs_renamed = swedish_jobs.rename(columns={
+                'Job Title': 'title',
+                'Company': 'company',
+                'Job URL': 'job_url',
+                'Date Posted': 'date_posted',
+                'Location': 'location',
+                'Source': 'site'
+            })
+            swedish_jobs_renamed['search_term'] = 'Swedish Board'
+            swedish_jobs_renamed['is_swedish_board'] = True
+            all_jobs.append(swedish_jobs_renamed)
+            print(f"Found {len(swedish_jobs)} jobs from Swedish boards")
+    except Exception as e:
+        print(f"Error fetching Swedish boards: {e}")
+
     # Combine all dataframes
     full_df = pd.concat(all_jobs, ignore_index=True)
     
@@ -208,6 +230,7 @@ def scrape_and_filter_jobs():
         # Check flags
         is_sweden = row.get('is_sweden_local', False)
         is_remote_board = row.get('is_remote_board', False)
+        is_swedish_board = row.get('is_swedish_board', False)
         
         # Apply filters
         # 1. Entry Level check (applies to all)
@@ -218,7 +241,8 @@ def scrape_and_filter_jobs():
         # Skip location checks for:
         # - Sweden local jobs (already local)
         # - Remote-only board jobs (already verified remote)
-        if not is_sweden and not is_remote_board and not is_eu_friendly(row):
+        # - Swedish board jobs (already Sweden-specific)
+        if not is_sweden and not is_remote_board and not is_swedish_board and not is_eu_friendly(row):
             continue
             
         filtered_jobs.append(row)

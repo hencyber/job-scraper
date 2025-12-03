@@ -49,7 +49,8 @@ US_LOCATIONS_TO_EXCLUDE = [
 ]
 
 US_KEYWORDS_TO_EXCLUDE = [
-    "US authorization required", "Must reside in US", "US Citizens only", "Green Card"
+    "US authorization required", "Must reside in US", "US Citizens only", "Green Card",
+    "Canada only", "Must reside in Canada", "North America only", "Must reside in North America"
 ]
 
 # Entry-level indicators (positive)
